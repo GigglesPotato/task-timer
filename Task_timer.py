@@ -1,75 +1,86 @@
-# Task_timer.py
-# Written by Noah Leeper
-# last updated on: 2/8/2025
-# A simple task timer that can start tasks end them show when they are running as well as a timesheet that can be exported as a csv
-# Github: GigglesPotato
+"""
+Written By Noah Leeper
+edited on: 2/18/2025
+Task Timer
+A simple CLI tool for tracking task durations.
+This program allows users to start, stop, and list tasks, storing them in a file for persistence.
+"""
+import datetime
+import click
+import os
+import sys
 
-
-
-
-import time
-import csv
-from datetime import datetime
-
+# Dictionary to store tasks
 tasks = {}
-timesheet = []
 
-def start_task(task_name):
-    if task_name in tasks:
-        print(f"'{task_name}' already running.")
-    else:
-        tasks[task_name] = time.time()
-        print(f"Started '{task_name}'.")
+# Load tasks from a file if it exists
+def load_tasks():
+    # Check if the file exists
+    if os.path.exists("tasks.txt"):
+        with open("tasks.txt", "r") as file:
+            for line in file:
+                name, start_time, end_time = line.strip().split(",")
+                tasks[name] = (datetime.datetime.fromisoformat(start_time), datetime.datetime.fromisoformat(end_time))
 
-def stop_task(task_name):
-    if task_name in tasks:
-        start_time = tasks.pop(task_name)
-        duration = time.time() - start_time
-        timesheet.append((task_name, start_time, time.time(), duration))
-        print(f"Stopped '{task_name}', {duration:.2f}s.")
-    else:
-        print(f"'{task_name}' not running.")
+# Save tasks to a file
+def save_tasks():
+    with open("tasks.txt", "w") as file:
+        for name, (start, end) in tasks.items():
+            file.write(f"{name},{start.isoformat()},{end.isoformat()}\n")
 
-def show_running_tasks():
-    print("Running tasks:" if tasks else "No tasks running.")
-    for task, start in tasks.items():
-        print(f"{task}: {time.time() - start:.0f}s")
+# Start a new task
+def start_task():
+    name = input("Enter task name: ")
+    if name in tasks:
+        print("Task already exists. Stop it before restarting.")
+        return
+    tasks[name] = (datetime.datetime.now(), None)
+    print(f"Started task '{name}' at {tasks[name][0]}.")
 
-def show_timesheet():
-    print("Timesheet:" if timesheet else "No completed tasks.")
-    for task, start, end, duration in timesheet:
-        print(f"{task}: {datetime.fromtimestamp(start)} - {datetime.fromtimestamp(end)}, {duration:.2f}s")
-# function to export to a csv file
-def export_to_csv(filename="timesheet.csv"):
-    if timesheet:
-        with open(filename, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Task", "Start", "End", "Duration (s)"])
-            writer.writerows([(t, datetime.fromtimestamp(s), datetime.fromtimestamp(e), f"{d:.2f}") for t, s, e, d in timesheet])
-        print(f"Saved to {filename}")
-    else:
-        print("No data to export.")
- # Handle choice picking and call functions
-def main():
+# Stop an active task
+def stop_task():
+    name = input("Enter task name to stop: ")
+    if name not in tasks or tasks[name][1] is not None:
+        print("Task not found or already stopped.")
+        return
+    start_time, _ = tasks[name]
+    tasks[name] = (start_time, datetime.datetime.now())
+    print(f"Stopped task '{name}' at {tasks[name][1]}.")
+
+# List all tasks and their durations
+def list_tasks():
+    for name, (start, end) in tasks.items():
+        duration = (end - start).total_seconds() if end else "Ongoing"
+        print(f"{name}: {start} - {end} | Duration: {duration} sec")
+
+# Display the menu and handle user input
+def menu():
+    options = {
+        "1": start_task,
+        "2": stop_task,
+        "3": list_tasks,
+        "4": save_tasks,
+        "5": exit
+    }
     while True:
-        print("\n1. Start a task \n2. Stop a task \n3. Check Running tasks \n4. Show Timesheet \n5. Export Timesheet as csv file \n6. Exit program")
-        choice = input("Choice: ")
-        choice = input("Choice: ")
-        
-        if choice == "1":
-            start_task(input("Task name: "))
-        elif choice == "2":
-            stop_task(input("Task name: "))
-        elif choice == "3":
-            show_running_tasks()
-        elif choice == "4":
-            show_timesheet()
-        elif choice == "5":
-            export_to_csv(input("Filename (default: timesheet.csv): ") or "timesheet.csv")
-        elif choice == "6":
-            exit()
+        print("\nTask Timer Menu:")
+        print("1. Start Task")
+        print("2. Stop Task")
+        print("3. List Tasks")
+        print("4. Save Tasks")
+        print("5. Exit")
+        choice = input("Choice: ").strip()
+        if choice in options:
+            options[choice]()
         else:
-            print("Invalid choice.")
+            print("Invalid choice, try again.")
 
+# Command-line interface entry point
+@click.command()
+def cli():
+    load_tasks()
+    menu()
+
+# Run the CLI if the script is executed directly
 if __name__ == "__main__":
-    main()
+    cli()
