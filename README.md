@@ -11,3 +11,8 @@ Additionally it will have some extensions that may or may not be implemented:
 2. Allow the user to export their timesheet as a csv file
 3. Allow the user to edit their timesheet
 ## Usage
+run the script with the command line using
+python task_timer.py
+
+
+
